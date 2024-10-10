@@ -478,30 +478,26 @@ def showQtGUI():
                 z = 0
 
                 if iType == "Xp":
-                    x = self.gStep
+                    x = convertUnits(self.gStep)
 
                 if iType == "Xm":
-                    x = -self.gStep
+                    x = convertUnits(-self.gStep)
 
                 if iType == "Yp":
-                    y = self.gStep
+                    y = convertUnits(self.gStep)
 
                 if iType == "Ym":
-                    y = -self.gStep
+                    y = convertUnits(-self.gStep)
 
                 if iType == "Zp":
-                    z = self.gStep
+                    z = convertUnits(self.gStep)
 
                 if iType == "Zm":
-                    z = -self.gStep
+                    z = convertUnits(-self.gStep)
+
 
                 [px, py, pz, r] = MagicPanels.getContainerPlacement(o, "clean")
 
-                # Units conversion
-                # pq() returns a Quantity, so using Value to get the value as a float
-                x = pq(f"{x} {self.gUnits}").Value
-                y = pq(f"{y} {self.gUnits}").Value
-                z = pq(f"{z} {self.gUnits}").Value
 
                 MagicPanels.setContainerPlacement(o, px + x, py + y, pz + z, 0, "clean")
 
@@ -863,7 +859,6 @@ def showQtGUI():
                 self.o4L.hide()
                 self.o4E.hide()
                 
-                # self.sUnitsL.hide()
                 self.sUnits.hide()
 
                 self.pathE1.show()
@@ -1051,6 +1046,14 @@ def showQtGUI():
                 self.s1S.setText(self.gNoSelection)
 
         # ############################################################################
+        def convertUnits(self, value):
+        
+            # Units conversion
+            # pq() returns a Quantity, so using Value to get the value as a float
+            return pq(f"{value} {self.gUnits}").Value
+        
+        # ############################################################################
+
 
     # ############################################################################
     # final settings
