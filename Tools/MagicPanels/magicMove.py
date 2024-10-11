@@ -4,6 +4,28 @@ from PySide import QtGui, QtCore
 import MagicPanels
 
 translate = FreeCAD.Qt.translate
+pq = FreeCAD.Units.parseQuantity
+
+
+#
+# DEBUGGING 
+#
+FreeCAD.gUnits = "init"
+FreeCAD._gStep = "init"
+FreeCAD._getSel_gStep = "init"
+FreeCAD._convertedUnits = "init"
+FreeCAD._o4E = "init"
+FreeCAD._getSel_o4E_raw = "init"
+FreeCAD._getSel_o4E_converted = "init"
+FreeCAD._convertU_raw =  "init"
+FreeCAD._convertU_converted =  "init"
+FreeCAD._convertU_gUnits =  "init"
+FreeCAD._getSel_selection = "init"
+FreeCAD._convertU_units = "init"
+#
+# DEBUGGING 
+#
+    
 
 # ############################################################################
 # Qt Main
@@ -20,6 +42,17 @@ def showQtGUI():
 		
 		gModeType = "Move"
 		gCopyType = "copyObject"
+		
+		gUnits = "mm"
+		gInfoUnits = translate("magicMove", "Units:")
+  
+		#
+		# DEBUGGING 
+		#
+		FreeCAD.gUnits = gUnits
+		#
+		# DEBUGGING 
+		#
 		
 		gInfoMoveX = translate('magicMove', 'Move along X:')
 		gInfoMoveY = translate('magicMove', 'Move along Y:')
@@ -256,17 +289,45 @@ def showQtGUI():
 			row += 30
 			
 			# label
-			self.o4L = QtGui.QLabel(self.gInfoMoveStep+"               ", self)
+			self.o4L = QtGui.QLabel(self.gInfoMoveStep, self)
 			self.o4L.move(10, row+3)
 
 			# text input
 			self.o4E = QtGui.QLineEdit(self)
 			self.o4E.setText(str(self.gStep))
 			self.o4E.setFixedWidth(50)
-			self.o4E.move(160, row)
+			self.o4E.move(105, row)
 
+			#
+			# DEBUGGING 
+			#
+			FreeCAD._gStep= self.gStep
+			FreeCAD._convertedUnits= self.convertUnits(self.gStep)
+			FreeCAD._o4E = self.o4E.text()
+			#
+			# DEBUGGING 
+			#
+   
 			rowNoPath = row
 			
+            # ############################################################################
+            # options - units
+            # ############################################################################
+
+            # combobox options
+            # FreeCAD.Units.parseQuantity supports more units,
+            # but keeping it simple to match what this workbench has in
+            # other areas for now
+			self.sUnitsList = ("mm", "in", "m")
+
+            # combobox
+			self.sUnits = QtGui.QComboBox(self)
+			self.sUnits.addItems(self.sUnitsList)
+			self.sUnits.setCurrentIndex(self.sUnitsList.index("mm"))
+			self.sUnits.activated[str].connect(self.setUnits)
+			self.sUnits.setFixedWidth(50)
+			self.sUnits.move(160, row)
+
 			# ############################################################################
 			# options - copy along path
 			# ############################################################################
@@ -723,10 +784,40 @@ def showQtGUI():
 				self.gStep = sizes[0]
 				self.gThick = sizes[0]
 				self.gCopyPathStep = sizes[1]
-				
-				self.o4E.setText(str(self.gStep))
+    
+				#
+    			# DEBUGGING 
+				#
+
+				print()
+				FreeCAD._getSel_selection = self.gObj
+				FreeCAD._getSel_gStep = self.gStep
+				FreeCAD._getSel_o4E_raw = self.o4E.text()
+				print(f'getSelected()')
+				print(f'  _getSel_gStep: {FreeCAD._getSel_gStep}')
+				print(f'  _getSel_o4E_raw: {FreeCAD._getSel_o4E_raw}')
+				print()
+				#
+    			# DEBUGGING 
+				#
+
+				gStepConverted = self.convertUnits(self.gStep, "mm")
+				# self.o4E.setText(str(self.gStep))
+				self.o4E.setText(str(gStepConverted))
 				self.pathE4.setText(str(self.gCopyPathStep))
 				
+				#
+    			# DEBUGGING 
+				#
+				FreeCAD._getSel_o4E_converted = self.o4E.text()
+				print()
+				print(f'getSelected() cont\'d')
+				print(f'  _getSel_o4E_converted: {FreeCAD._getSel_o4E_converted}')
+				print()
+				#
+    			# DEBUGGING 
+				#
+    
 				if len(self.gObjects) > 1:
 					self.s1S.setText("Multi, "+str(self.gObj.Label))
 				else:
@@ -776,6 +867,8 @@ def showQtGUI():
 			self.o4L.show()
 			self.o4E.show()
 			
+			self.sUnits.show()
+			
 			if selectedText == "Move":
 				self.o1L.setText(self.gInfoMoveX)
 				self.o2L.setText(self.gInfoMoveY)
@@ -810,6 +903,8 @@ def showQtGUI():
 				
 				self.o4L.hide()
 				self.o4E.hide()
+				
+				self.sUnits.hide()
 				
 				self.pathE1.show()
 				self.pathE2.show()
@@ -872,6 +967,14 @@ def showQtGUI():
 			except:
 				self.pathL3.setText(self.gNoPathSelection)
 
+		def setUnits(self, selectedText):
+			self.gUnits = selectedText
+			FreeCAD.gUnits = self.gUnits
+			print()
+			print(f'setUnits()')
+			print(f'  gUnits: {FreeCAD.gUnits}')
+			print()
+            
 		# ############################################################################
 		def setCornerM(self):
 
@@ -995,6 +1098,26 @@ def showQtGUI():
 			except:
 				self.s1S.setText(self.gNoSelection)
 
+		# ############################################################################
+		def convertUnits(self, measurement, units = ""):
+			print()
+			print('convertUnits()')
+   
+			if units == "":
+				FreeCAD._convertU_units = "EMPTY"
+				units = self.gUnits
+				print(f'  _convertU_units: {FreeCAD._convertU_units}')
+    
+			FreeCAD._convertU_raw = measurement
+			FreeCAD._convertU_converted = pq(f"{measurement} {units}").Value
+			FreeCAD._convertU_gUnits = units
+			print(f'  _convertU_raw: {FreeCAD._convertU_raw}')
+			print(f'  _convertU_converted: {FreeCAD._convertU_converted}')
+			print(f'  _convertU_gUnits: {FreeCAD._convertU_gUnits}')
+			print()
+   
+			return pq(f"{measurement} {units}").Value
+	
 		# ############################################################################
 		
 	# ############################################################################
