@@ -5,11 +5,21 @@ import MagicPanels
 
 translate = FreeCAD.Qt.translate
 pq = FreeCAD.Units.parseQuantity
+# despite the name, toNumber() converts FROM a Quantity or float TO a str
+toNum = FreeCAD.Units.toNumber
+schemaTranslate = FreeCAD.Units.schemaTranslate
+currSchema =  FreeCAD.Units.getSchema()
+currSchemaEnum = FreeCAD.Units.Scheme(currSchema).name
+
+# q = FreeCAD.Units.toQuantity
+
 
 
 #
 # DEBUGGING 
 #
+FreeCAD._currSchema = currSchema
+FreeCAD._currSchemaEnum = currSchemaEnum
 FreeCAD.gUnits = "init"
 FreeCAD._gStep = "init"
 FreeCAD._getSel_gStep = "init"
@@ -26,6 +36,8 @@ FreeCAD._convertU_units = "init"
 # DEBUGGING 
 #
     
+def debugPrint(name, val):
+	print(f'{name}: {val}')
 
 # ############################################################################
 # Qt Main
@@ -297,16 +309,6 @@ def showQtGUI():
 			self.o4E.setText(str(self.gStep))
 			self.o4E.setFixedWidth(50)
 			self.o4E.move(105, row)
-
-			#
-			# DEBUGGING 
-			#
-			FreeCAD._gStep= self.gStep
-			FreeCAD._convertedUnits= self.convertUnits(self.gStep)
-			FreeCAD._o4E = self.o4E.text()
-			#
-			# DEBUGGING 
-			#
    
 			rowNoPath = row
 			
@@ -508,28 +510,47 @@ def showQtGUI():
 			for o in self.gObjects:
 
 				self.gStep = float(self.o4E.text())
-				
+				gStepConverted = self.convertUnits(self.gStep) 			
+    
 				x = 0
 				y = 0
 				z = 0
 				
+				# if iType == "Xp":
+				# 	x = self.gStep
+				
+				# if iType == "Xm":
+				# 	x = - self.gStep
+
+				# if iType == "Yp":
+				# 	y = self.gStep
+
+				# if iType == "Ym":
+				# 	y = - self.gStep
+
+				# if iType == "Zp":
+				# 	z = self.gStep
+
+				# if iType == "Zm":
+				# 	z = - self.gStep
+				
 				if iType == "Xp":
-					x = self.gStep
+					x = gStepConverted
 				
 				if iType == "Xm":
-					x = - self.gStep
+					x = - gStepConverted
 
 				if iType == "Yp":
-					y = self.gStep
+					y = gStepConverted
 
 				if iType == "Ym":
-					y = - self.gStep
+					y = - gStepConverted
 
 				if iType == "Zp":
-					z = self.gStep
+					z = gStepConverted
 
 				if iType == "Zm":
-					z = - self.gStep
+					z = - gStepConverted
 				
 				[ px, py, pz, r ] = MagicPanels.getContainerPlacement(o, "clean")
 				MagicPanels.setContainerPlacement(o, px+x, py+y, pz+z, 0, "clean")
@@ -547,6 +568,7 @@ def showQtGUI():
 				x, y, z, r = self.gLCPX[key], self.gLCPY[key], self.gLCPZ[key], self.gLCPR[key]
 
 				self.gStep = float(self.o4E.text())
+				gStep = self.convertUnits(self.gStep)
 
 				if self.gCopyType == "copyObject":
 					copy = FreeCAD.ActiveDocument.copyObject(o)
@@ -574,26 +596,25 @@ def showQtGUI():
 					MagicPanels.moveToParent([ copy ], self.gToCopy[str(o.Name)])
 
 				if iType == "Xp":
-					x = x + self.gMaxX + self.gStep
+					x = x + self.gMaxX + gStep
 				
 				if iType == "Xm":
-					x = x - self.gMaxX - self.gStep
+					x = x - self.gMaxX - gStep
 
 				if iType == "Yp":
-					y = y + self.gMaxY + self.gStep
+					y = y + self.gMaxY + gStep
 
 				if iType == "Ym":
-					y = y - self.gMaxY - self.gStep
+					y = y - self.gMaxY - gStep
 
 				if iType == "Zp":
-					z = z + self.gMaxZ + self.gStep
+					z = z + self.gMaxZ + gStep
 
 				if iType == "Zm":
-					z = z - self.gMaxZ - self.gStep
+					z = z - self.gMaxZ - gStep
 
 				MagicPanels.setContainerPlacement(copy, x, y, z, 0, "clean")
 				FreeCAD.ActiveDocument.recompute()
-				
 				try:
 					MagicPanels.copyColors(o, copy)
 				except:
@@ -655,7 +676,15 @@ def showQtGUI():
 				if iType == "Zm":
 					mz = - self.gStep
 					direction = (0, 0, 1)
-					
+
+
+				mx = self.convertUnits(mx)
+				x = self.convertUnits(x)
+				my = self.convertUnits(my)
+				y = self.convertUnits(y)
+				mz = self.convertUnits(mz)
+				z = self.convertUnits(z)
+
 				mirror = FreeCAD.ActiveDocument.addObject('Part::Mirroring', "mirror")
 				mirror.Label = "Mirror, " + str(o.Label) + " "
 				mirror.Source = FreeCAD.ActiveDocument.getObject(o.Name)
@@ -785,39 +814,9 @@ def showQtGUI():
 				self.gThick = sizes[0]
 				self.gCopyPathStep = sizes[1]
     
-				#
-    			# DEBUGGING 
-				#
-
-				print()
-				FreeCAD._getSel_selection = self.gObj
-				FreeCAD._getSel_gStep = self.gStep
-				FreeCAD._getSel_o4E_raw = self.o4E.text()
-				print(f'getSelected()')
-				print(f'  _getSel_gStep: {FreeCAD._getSel_gStep}')
-				print(f'  _getSel_o4E_raw: {FreeCAD._getSel_o4E_raw}')
-				print()
-				#
-    			# DEBUGGING 
-				#
-
-				gStepConverted = self.convertUnits(self.gStep, "mm")
-				# self.o4E.setText(str(self.gStep))
-				self.o4E.setText(str(gStepConverted))
+				self.o4E.setText(str(self.gStep))
 				self.pathE4.setText(str(self.gCopyPathStep))
 				
-				#
-    			# DEBUGGING 
-				#
-				FreeCAD._getSel_o4E_converted = self.o4E.text()
-				print()
-				print(f'getSelected() cont\'d')
-				print(f'  _getSel_o4E_converted: {FreeCAD._getSel_o4E_converted}')
-				print()
-				#
-    			# DEBUGGING 
-				#
-    
 				if len(self.gObjects) > 1:
 					self.s1S.setText("Multi, "+str(self.gObj.Label))
 				else:
@@ -969,11 +968,6 @@ def showQtGUI():
 
 		def setUnits(self, selectedText):
 			self.gUnits = selectedText
-			FreeCAD.gUnits = self.gUnits
-			print()
-			print(f'setUnits()')
-			print(f'  gUnits: {FreeCAD.gUnits}')
-			print()
             
 		# ############################################################################
 		def setCornerM(self):
@@ -1100,22 +1094,9 @@ def showQtGUI():
 
 		# ############################################################################
 		def convertUnits(self, measurement, units = ""):
-			print()
-			print('convertUnits()')
-   
 			if units == "":
-				FreeCAD._convertU_units = "EMPTY"
 				units = self.gUnits
-				print(f'  _convertU_units: {FreeCAD._convertU_units}')
-    
-			FreeCAD._convertU_raw = measurement
-			FreeCAD._convertU_converted = pq(f"{measurement} {units}").Value
-			FreeCAD._convertU_gUnits = units
-			print(f'  _convertU_raw: {FreeCAD._convertU_raw}')
-			print(f'  _convertU_converted: {FreeCAD._convertU_converted}')
-			print(f'  _convertU_gUnits: {FreeCAD._convertU_gUnits}')
-			print()
-   
+			
 			return pq(f"{measurement} {units}").Value
 	
 		# ############################################################################
